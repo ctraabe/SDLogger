@@ -62,8 +62,8 @@ void MKSerial::ProcessIncoming(void)
       checksum_ %= 4096;
       uint8_t checksum1 = '=' + checksum_ / 64;
       uint8_t checksum2 = '=' + checksum_ % 64;
-      if ((checksum1 == rx_buffer_[rx_buffer_head_ - 2]) && (checksum2 ==
-        rx_buffer_[rx_buffer_head_ - 1]))
+      if ((checksum1 == rx_buffer_[rx_buffer_head_ - 2])
+        && (checksum2 == rx_buffer_[rx_buffer_head_ - 1]))
       {
         DecodeRx();
       }
@@ -80,7 +80,7 @@ void MKSerial::DecodeRx(void)
   // Every 3 bytes of transmitted data is encoded into 4 bytes and is wrapped in
   // a 3-byte header and 3-byte footer, so:
   if (rx_buffer_head_ > 6)
-    packet_queue_[packet_queue_head_].length = ((rx_buffer_head_ - 6) / 4) * 3;
+    packet_queue_[packet_queue_head_].length = ((rx_buffer_head_ - 5) / 4) * 3;
   else
     packet_queue_[packet_queue_head_].length = 0;
 

@@ -20,7 +20,7 @@ SdFat sd;
 File data_file;
 
 // Mikrokopter serial protocol
-// MKSerial mk_serial(Serial2);
+MKSerial mk_serial(Serial2);
 
 // UBlox serial protocol
 UBlox ublox_serial(Serial1);
@@ -79,6 +79,24 @@ void LogGPSSol(void)
   data_file.println((int)ubx_sol->number_of_satelites_used);
 }
 
+void LogFCSensorData(void)
+{
+  FCSensorData * fc_sensor_data
+    = reinterpret_cast<FCSensorData *>(mk_serial.Data());
+  data_file.print("0,");
+
+  data_file.print(fc_sensor_data->timestamp); data_file.print(',');
+  data_file.print(fc_sensor_data->accelerometer_sum[0]); data_file.print(',');
+  data_file.print(fc_sensor_data->accelerometer_sum[1]); data_file.print(',');
+  data_file.print(fc_sensor_data->accelerometer_sum[2]); data_file.print(',');
+  data_file.print(fc_sensor_data->gyro_sum[0]); data_file.print(',');
+  data_file.print(fc_sensor_data->gyro_sum[1]); data_file.print(',');
+  data_file.print(fc_sensor_data->gyro_sum[2]); data_file.print(',');
+  data_file.print(fc_sensor_data->biased_pressure); data_file.print(',');
+  data_file.print(fc_sensor_data->counter_128_hz); data_file.print(',');
+  data_file.println(fc_sensor_data->led_on);
+}
+
 void setup()
 {
   pinMode(GREEN_LED, OUTPUT);
@@ -98,14 +116,14 @@ void setup()
   digitalWrite(LED3, LOW);
   digitalWrite(LED4, LOW);
 
-  // Initialize the SD card (fails if not present).
-  // sd_initialized = sd.begin(CARD_SELECT, SPI_HALF_SPEED);
-
   // Debug output over USB programming port.
   Serial.begin(57600);
 
-  // mk_serial.Init();
+  mk_serial.Init();
   ublox_serial.Init();
+
+  digitalWrite(LED1, HIGH);
+  digitalWrite(LED2, HIGH);
 }
 
 void loop()
@@ -176,9 +194,7 @@ void loop()
     ublox_serial.Pop();
   }
 
-
-
-/*
+  // MK FlightCtrl Logging
   mk_serial.ProcessIncoming();
 
   if (mk_serial.IsAvailable())
@@ -187,22 +203,7 @@ void loop()
     {
       digitalWrite(LED2, HIGH);
 
-      struct MKData {
-        int16_t int16[8];
-        uint8_t uint8[2];
-      };
-      MKData* packet = reinterpret_cast<MKData*>(mk_serial.Data());
-
-      data_file.print(millis());
-      data_file.print(",");
-      for (int i = 0; i < 8; i++)
-      {
-        data_file.print(packet->int16[i]);
-        data_file.print(",");
-      }
-      data_file.print((int)packet->uint8[0]);
-      data_file.print(",");
-      data_file.println((int)packet->uint8[1]);
+      LogFCSensorData();
 
       digitalWrite(LED2, LOW);
     }
@@ -212,5 +213,4 @@ void loop()
     }
     mk_serial.Pop();
   }
-*/
 }

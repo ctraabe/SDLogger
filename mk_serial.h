@@ -52,4 +52,14 @@ private:
   uint16_t checksum_;
 };
 
+struct FCSensorData {
+  int16_t timestamp;
+  int16_t accelerometer_sum[3];
+  int16_t gyro_sum[3];
+  uint16_t biased_pressure;
+  uint8_t counter_128_hz;
+  uint8_t led_on;
+} __attribute__((packed));
+
+
 #endif  // MK_SERIAL_HPP_
