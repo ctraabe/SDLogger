@@ -53,7 +53,7 @@ private:
 };
 
 struct FCSensorData {
-  int16_t timestamp;
+  uint16_t timestamp;
   int16_t accelerometer_sum[3];
   int16_t gyro_sum[3];
   uint16_t biased_pressure;

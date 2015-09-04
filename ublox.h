@@ -17,8 +17,9 @@ typedef unsigned int uint;
 #define kSyncChar2 (0x62)
 #define kClassNAV (0x01)
 #define kIDPosLLH (0x02)
-#define kIDVelNED (0x12)
 #define kIDSol (0x06)
+#define kIDVelNED (0x12)
+#define kIDTimeUTC (0x21)
 
 class UBlox
 {
@@ -37,6 +38,8 @@ public:
 
   void Pop(void) { packet_queue_tail_ = (packet_queue_tail_ + 1) & kPacketQueuMask; };
   void ProcessIncoming(void);
+
+  void RequestTime(void);
 
 private:
 
@@ -110,6 +113,20 @@ struct UBXSol
   uint8_t reserved1;
   uint8_t number_of_satelites_used;
   uint32_t reserved2;
+} __attribute__((packed));
+
+struct UBXTimeUTC
+{
+  uint32_t gps_ms_time_of_week;
+  uint32_t t_acc;
+  int32_t nano;
+  uint16_t year;
+  uint8_t month;
+  uint8_t day;
+  uint8_t hour;
+  uint8_t min;
+  uint8_t sec;
+  uint8_t valid;
 } __attribute__((packed));
 
 #endif  // UBLOX_HPP_

@@ -27,7 +27,6 @@ uint8_t * MKSerial::Data(void)
 void MKSerial::ProcessIncoming(void)
 {
   if (!serial_.available()) return;
-
   uint8_t byte = serial_.read();
   if (rx_buffer_head_ == 0)
   {

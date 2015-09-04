@@ -98,6 +98,11 @@ void UBlox::Init(void)
       0x01, 0x1e, 0x67 };
     serial_.write(tx_buffer, 11);
   }
+  {  // Request Time-UTC message to be output every 5 measurement cycles.
+    uint8_t tx_buffer[11] = { 0xb5, 0x62, 0x06, 0x01, 0x03, 0x00, 0x01, 0x21,
+      0x05, 0x31, 0x89 };
+    serial_.write(tx_buffer, 11);
+  }
 }
 
 uint8_t * UBlox::Data(void)
@@ -170,9 +175,7 @@ void UBlox::ProcessIncoming(void)
       if (byte == kClassNAV) NextDataByte(byte);
       else rx_buffer_head_ = 0;
       break;
-    case 3:  // ID (PosLLH or VelNED)
-      // if (byte == kIDPosLLH || byte == kIDVelNED) NextDataByte(byte);
-      // else rx_buffer_head_ = 0;
+    case 3:  // ID
       NextDataByte(byte);
       break;
     case 4:  // Length (lower byte)
@@ -196,6 +199,12 @@ void UBlox::ProcessIncoming(void)
       }
       break;
   }
+}
+
+void UBlox::RequestTime(void)
+{
+  uint8_t tx_buffer[8] = { 0xb5, 0x62, 0x01, 0x21, 0x00, 0x00, 0x22, 0x67 };
+  serial_.write(tx_buffer, 8);
 }
 
 void UBlox::DecodeRx(void)
