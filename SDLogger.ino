@@ -2,6 +2,7 @@
 #include <SPI.h>
 
 #include "mk_serial.h"
+#include "mavlink.h"
 #include "ublox.h"
 
 // Pin definitions
