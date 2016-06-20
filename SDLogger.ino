@@ -38,6 +38,9 @@ MKSerial mk_serial(Serial2);
 // Mikrokopter serial protocol
 MKSerial mk_mag(Serial3);
 
+// MAVLink-based sensor
+MAVLink px4flow(Serial3);
+
 bool sd_initialized;
 
 void LogGPSPosLLH(void)
@@ -110,6 +113,40 @@ void LogMagData(void)
   data_file.print(mag_data[0]); data_file.print(',');
   data_file.print(mag_data[1]); data_file.print(',');
   data_file.println(mag_data[2]);
+}
+
+void LogOpticalFlow(void)
+{
+  OpticalFlow * optical_flow = reinterpret_cast<OpticalFlow *>(px4flow.Data());
+  data_file.print("5,");
+
+  data_file.print(millis()); data_file.print(',');
+  data_file.print((uint32_t)optical_flow->time_usec); data_file.print(',');
+  data_file.print(optical_flow->flow_x); data_file.print(',');
+  data_file.print(optical_flow->flow_y); data_file.print(',');
+  data_file.print(optical_flow->flow_comp_m_x); data_file.print(',');
+  data_file.print(optical_flow->flow_comp_m_y); data_file.print(',');
+  data_file.print(optical_flow->quality); data_file.print(',');
+  data_file.println(optical_flow->ground_distance); data_file.print(',');
+}
+
+void LogOpticalFlowRad(void)
+{
+  OpticalFlowRad * optical_flow
+    = reinterpret_cast<OpticalFlowRad *>(px4flow.Data());
+  data_file.print("6,");
+
+  data_file.print(millis()); data_file.print(',');
+  data_file.print((uint32_t)optical_flow->time_usec); data_file.print(',');
+  data_file.print(optical_flow->integration_time_us); data_file.print(',');
+  data_file.print(optical_flow->integrated_x); data_file.print(',');
+  data_file.print(optical_flow->integrated_y); data_file.print(',');
+  data_file.print(optical_flow->integrated_xgyro); data_file.print(',');
+  data_file.print(optical_flow->integrated_ygyro); data_file.print(',');
+  data_file.print(optical_flow->integrated_zgyro); data_file.print(',');
+  data_file.print(optical_flow->quality); data_file.print(',');
+  data_file.print(optical_flow->time_delta_distance_us); data_file.print(',');
+  data_file.println(optical_flow->distance); data_file.print(',');
 }
 
 void UpdateTime(void)
@@ -185,8 +222,9 @@ void setup()
   // Give us a second.
   delay(1000);
 
-  mk_mag.Init();
-  mk_serial.Init();
+  // mk_mag.Init();
+  // mk_serial.Init();
+  px4flow.Init();
   ublox_serial.Init();
 }
 
@@ -278,6 +316,36 @@ void loop()
     ublox_serial.Pop();
   }
 
+  // PX4FLOW
+  px4flow.ProcessIncoming();
+
+  if (px4flow.IsAvailable())
+  {
+    if (logging_active)
+    {
+      digitalWrite(LED3, HIGH);
+
+      Serial.println(px4flow.MessageID());
+      switch (px4flow.MessageID())
+      {
+        case 0:  // heartbeat
+          break;
+        case 100:  // optical flow
+          LogOpticalFlow();
+          break;
+        case 106:  // optical flow rad
+          LogOpticalFlowRad();
+          break;
+        default:
+          break;
+      }
+      LogOpticalFlow();
+
+      digitalWrite(LED3, LOW);
+    }
+    px4flow.Pop();
+  }
+/*
   // MK FlightCtrl Logging
   mk_serial.ProcessIncoming();
 
@@ -317,4 +385,5 @@ void loop()
     }
     mk_mag.Pop();
   }
+*/
 }

@@ -30,6 +30,13 @@ public:
   bool IsAvailable(void) { return packet_queue_head_ != packet_queue_tail_; };
   uint8_t * Data(void);
 
+  char SystemID(void);
+  char ComponentID(void);
+  char MessageID(void);
+  uint Length(void);
+  uint SequenceNumber(void);
+  union U16Bytes CRC(void);
+
   void Pop(void) { packet_queue_tail_ = (packet_queue_tail_ + 1) & kPacketQueuMask; };
   void ProcessIncoming(void);
 

@@ -187,7 +187,7 @@ void UBlox::ProcessIncoming(void)
       {
         NextDataByte(byte);
       }
-      else if (rx_buffer_head_ == length -2)
+      else if (rx_buffer_head_ == length - 2)
       {
         if (byte == checksum_a_) rx_buffer_head_++;
         else rx_buffer_head_ = 0;
