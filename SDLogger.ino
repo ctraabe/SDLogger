@@ -3,6 +3,7 @@
 
 #include "mk_serial.h"
 #include "mavlink.h"
+#include "tera_ranger.h"
 #include "ublox.h"
 
 // Pin definitions
@@ -34,6 +35,9 @@ UBlox ublox_serial(Serial1);
 
 // Mikrokopter serial protocol
 MKSerial mk_serial(Serial2);
+
+// TeraRanger
+TeraRanger tera_ranger(Serial2);
 
 // Mikrokopter serial protocol
 MKSerial mk_mag(Serial3);
@@ -127,7 +131,7 @@ void LogOpticalFlow(void)
   data_file.print(optical_flow->flow_comp_m_x); data_file.print(',');
   data_file.print(optical_flow->flow_comp_m_y); data_file.print(',');
   data_file.print(optical_flow->quality); data_file.print(',');
-  data_file.println(optical_flow->ground_distance); data_file.print(',');
+  data_file.println(optical_flow->ground_distance);
 }
 
 void LogOpticalFlowRad(void)
@@ -146,7 +150,16 @@ void LogOpticalFlowRad(void)
   data_file.print(optical_flow->integrated_zgyro); data_file.print(',');
   data_file.print(optical_flow->quality); data_file.print(',');
   data_file.print(optical_flow->time_delta_distance_us); data_file.print(',');
-  data_file.println(optical_flow->distance); data_file.print(',');
+  data_file.println(optical_flow->distance);
+}
+
+void LogTeraRanger(void)
+{
+  data_file.print("7,");
+
+  data_file.print(millis()); data_file.print(',');
+  data_file.print(tera_ranger.IR()); data_file.print(',');
+  data_file.println(tera_ranger.Sonar());
 }
 
 void UpdateTime(void)
@@ -222,10 +235,11 @@ void setup()
   // Give us a second.
   delay(1000);
 
-  // mk_mag.Init();
-  // mk_serial.Init();
-  px4flow.Init();
-  ublox_serial.Init();
+  ublox_serial.Init();  // Serial1
+  // mk_serial.Init();  // Serial2
+  tera_ranger.Init();  // Serial2
+  // mk_mag.Init();  // Serial3
+  px4flow.Init();  // Serial3
 }
 
 void loop()
@@ -284,13 +298,11 @@ void loop()
 
   // GPS Logging
   ublox_serial.ProcessIncoming();
-
   if (ublox_serial.IsAvailable())
   {
     if (logging_active)
     {
       digitalWrite(LED1, HIGH);
-
       switch (ublox_serial.ID())
       {
         case kIDPosLLH:
@@ -305,7 +317,6 @@ void loop()
         default:
           break;
       }
-
       digitalWrite(LED1, LOW);
     }
     else if (ublox_serial.ID() == kIDTimeUTC)
@@ -314,36 +325,6 @@ void loop()
     }
 
     ublox_serial.Pop();
-  }
-
-  // PX4FLOW
-  px4flow.ProcessIncoming();
-
-  if (px4flow.IsAvailable())
-  {
-    if (logging_active)
-    {
-      digitalWrite(LED3, HIGH);
-
-      Serial.println(px4flow.MessageID());
-      switch (px4flow.MessageID())
-      {
-        case 0:  // heartbeat
-          break;
-        case 100:  // optical flow
-          LogOpticalFlow();
-          break;
-        case 106:  // optical flow rad
-          LogOpticalFlowRad();
-          break;
-        default:
-          break;
-      }
-      LogOpticalFlow();
-
-      digitalWrite(LED3, LOW);
-    }
-    px4flow.Pop();
   }
 /*
   // MK FlightCtrl Logging
@@ -354,9 +335,7 @@ void loop()
     if (logging_active)
     {
       digitalWrite(LED2, HIGH);
-
       LogFCSensorData();
-
       digitalWrite(LED2, LOW);
     }
     else
@@ -365,7 +344,21 @@ void loop()
     }
     mk_serial.Pop();
   }
-
+*/
+  // TeraRanger
+  tera_ranger.ProcessIncoming();
+  if (tera_ranger.IsAvailable())
+  {
+    if (logging_active)
+    {
+      digitalWrite(LED2, HIGH);
+      LogTeraRanger();
+      Serial.println(tera_ranger.IR());
+      digitalWrite(LED2, LOW);
+    }
+    tera_ranger.Pop();
+  }
+/*
   // MK Mag Logging
   mk_mag.ProcessIncoming();
 
@@ -386,4 +379,29 @@ void loop()
     mk_mag.Pop();
   }
 */
+  // PX4FLOW
+  px4flow.ProcessIncoming();
+  if (px4flow.IsAvailable())
+  {
+    if (logging_active)
+    {
+      digitalWrite(LED3, HIGH);
+      switch (px4flow.MessageID())
+      {
+        case 0:  // heartbeat
+          break;
+        case 100:  // optical flow
+          LogOpticalFlow();
+          break;
+        case 106:  // optical flow rad
+          LogOpticalFlowRad();
+          break;
+        default:
+          break;
+      }
+      LogOpticalFlow();
+      digitalWrite(LED3, LOW);
+    }
+    px4flow.Pop();
+  }
 }
