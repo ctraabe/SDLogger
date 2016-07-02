@@ -1,106 +1,41 @@
-#include "mavlink.h"
+#include "mavlink.hpp"
 
 #include "crc16.h"
 
-MAVLink::MAVLink(HardwareSerial &serial) :
-  serial_(serial),
-  rx_buffer_({ 0 }),
-  rx_buffer_head_(0),
-  data_buffer_({ { 0 } }),
+MAVLink::MAVLink(void) :
   packet_queue_({ { 0 } }),
-  packet_queue_head_(0),
-  packet_queue_tail_(0),
-  crc_({ 0 })
+  queue_head_(MAVLINK_QUEUE_MASK),
+  queue_tail_(MAVLINK_QUEUE_MASK),
+  queue_rx_(0),
+  overrun_(false)
 {
 }
 
-void MAVLink::Init(void)
+void MAVLink::ProcessIncoming(uint8_t byte)
 {
-  serial_.begin(115200);
-}
+  static uint8_t * rx_ptr = &packet_queue_[0].start_byte;
+  static size_t bytes_processed = 0, length = 0;
+  static int message_id;
+  static union U16Bytes crc;
 
-uint8_t * MAVLink::Data(void)
-{
-  if (IsAvailable())
-    return &data_buffer_[packet_queue_tail_][0];
-  else
-    return NULL;
-};
-
-char MAVLink::SystemID(void)
-{
-  if (IsAvailable())
-    return packet_queue_[packet_queue_tail_].system_id;
-  else
-    return 0;
-}
-
-char MAVLink::ComponentID(void)
-{
-  if (IsAvailable())
-    return packet_queue_[packet_queue_tail_].component_id;
-  else
-    return 0;
-}
-
-char MAVLink::MessageID(void)
-{
-  if (IsAvailable())
-    return packet_queue_[packet_queue_tail_].message_id;
-  else
-    return 0;
-}
-
-uint MAVLink::Length(void)
-{
-  if (IsAvailable())
-    return packet_queue_[packet_queue_tail_].length;
-  else
-    return 0;
-}
-
-uint MAVLink::SequenceNumber(void)
-{
-  if (IsAvailable())
-    return packet_queue_[packet_queue_tail_].sequence_number;
-  else
-    return 0;
-}
-
-union U16Bytes MAVLink::CRC(void)
-{
-  return packet_queue_[packet_queue_tail_].crc;
-}
-
-
-void MAVLink::ProcessIncoming(void)
-{
-  if (!serial_.available()) return;
-
-  static uint length = 0;
-  uint8_t byte = serial_.read();
-
-  switch (rx_buffer_head_)
+  switch (bytes_processed)
   {
     case 0:  // Sync char
-      if (byte == 0xFE) rx_buffer_[rx_buffer_head_++] = byte;
-      crc_.u16 = 0xFFFF;
+      if (byte != 0xFE) return;
       break;
     case 1:  // Payload length
+      if (byte > MAVLINK_DATA_BUFFER_SIZE) goto RESET;
       length = byte;
-      rx_buffer_[rx_buffer_head_++] = byte;
-      crc_.u16 = CRCUpdateCCITT(crc_.u16, byte);
-      break;
+      crc.u16 = 0xFFFF;
     default:
-      if (rx_buffer_head_ < length + 6)
+      if (bytes_processed < 6 + length)
       {
-        rx_buffer_[rx_buffer_head_++] = byte;
-        crc_.u16 = CRCUpdateCCITT(crc_.u16, byte);
+        crc.u16 = CRCUpdateCCITT(crc.u16, byte);
       }
-      else if (rx_buffer_head_ == length + 6)
+      else if (bytes_processed == 6 + length)
       {
         uint8_t crc_extra;
-        switch (rx_buffer_[5])
+        switch (packet_queue_[queue_rx_].message_id)
         {
           case 0:  // heartbeat
             crc_extra = 50;
@@ -115,32 +50,32 @@ void MAVLink::ProcessIncoming(void)
             crc_extra = 0;
             break;
         }
-        crc_.u16 = CRCUpdateCCITT(crc_.u16, crc_extra);
-        if (byte == crc_.bytes[0]) rx_buffer_head_++;
-        else rx_buffer_head_ = 0;
+        crc.u16 = CRCUpdateCCITT(crc.u16, crc_extra);
+        if (byte != crc.bytes[0]) goto RESET;
       }
       else
       {
-        if (byte == crc_.bytes[1]) DecodeRx();
-        rx_buffer_head_ = 0;
+        if (byte == crc.bytes[1]) DecodeRx();
+        goto RESET;
       }
       break;
   }
+  *rx_ptr++ = byte;
+  bytes_processed++;
+  return;
+
+  RESET:
+  rx_ptr = &packet_queue_[queue_rx_].start_byte;
+  bytes_processed = 0;
 }
 
 void MAVLink::DecodeRx(void)
 {
-  packet_queue_[packet_queue_head_].length = rx_buffer_[1];
-  packet_queue_[packet_queue_head_].sequence_number = rx_buffer_[2];
-  packet_queue_[packet_queue_head_].system_id = rx_buffer_[3];
-  packet_queue_[packet_queue_head_].component_id = rx_buffer_[4];
-  packet_queue_[packet_queue_head_].message_id = rx_buffer_[5];
-  packet_queue_[packet_queue_head_].crc.bytes[0] = crc_.bytes[0];
-  packet_queue_[packet_queue_head_].crc.bytes[1] = crc_.bytes[1];
+  // Set the tail of the queue to the newly processed data.
+  queue_tail_ = queue_rx_;
 
-  for (uint i = 0; i < rx_buffer_[1]; i++)
-    data_buffer_[packet_queue_head_][i] = rx_buffer_[6+i];
+  // Move the packet_queue reception location to the next slot.
+  queue_rx_ = (queue_rx_ + 1) & MAVLINK_QUEUE_MASK;
 
-  // Move the packet_queue head to the next slot.
-  packet_queue_head_ = (packet_queue_head_ + 1) & kPacketQueuMask;
+  if (queue_rx_ == queue_tail_) overrun_ = true;
 }

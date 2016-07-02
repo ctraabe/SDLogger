@@ -2,7 +2,7 @@
 #include <SPI.h>
 
 #include "mk_serial.h"
-#include "mavlink.h"
+#include "mavlink.hpp"
 #include "tera_ranger.h"
 #include "ublox.h"
 
@@ -43,7 +43,7 @@ TeraRanger tera_ranger(Serial2);
 MKSerial mk_mag(Serial3);
 
 // MAVLink-based sensor
-MAVLink px4flow(Serial3);
+MAVLink px4flow;
 
 bool sd_initialized;
 
@@ -121,23 +121,24 @@ void LogMagData(void)
 
 void LogOpticalFlow(void)
 {
-  OpticalFlow * optical_flow = reinterpret_cast<OpticalFlow *>(px4flow.Data());
+  OpticalFlow * optical_flow = reinterpret_cast<OpticalFlow *>
+    (px4flow.Payload());
   data_file.print("5,");
 
   data_file.print(millis()); data_file.print(',');
   data_file.print((uint32_t)optical_flow->time_usec); data_file.print(',');
-  data_file.print(optical_flow->flow_x); data_file.print(',');
-  data_file.print(optical_flow->flow_y); data_file.print(',');
   data_file.print(optical_flow->flow_comp_m_x); data_file.print(',');
   data_file.print(optical_flow->flow_comp_m_y); data_file.print(',');
-  data_file.print(optical_flow->quality); data_file.print(',');
   data_file.println(optical_flow->ground_distance);
+  data_file.print(optical_flow->flow_x); data_file.print(',');
+  data_file.print(optical_flow->flow_y); data_file.print(',');
+  data_file.print(optical_flow->quality); data_file.print(',');
 }
 
 void LogOpticalFlowRad(void)
 {
-  OpticalFlowRad * optical_flow
-    = reinterpret_cast<OpticalFlowRad *>(px4flow.Data());
+  OpticalFlowRad * optical_flow = reinterpret_cast<OpticalFlowRad *>
+    (px4flow.Payload());
   data_file.print("6,");
 
   data_file.print(millis()); data_file.print(',');
@@ -148,9 +149,10 @@ void LogOpticalFlowRad(void)
   data_file.print(optical_flow->integrated_xgyro); data_file.print(',');
   data_file.print(optical_flow->integrated_ygyro); data_file.print(',');
   data_file.print(optical_flow->integrated_zgyro); data_file.print(',');
-  data_file.print(optical_flow->quality); data_file.print(',');
   data_file.print(optical_flow->time_delta_distance_us); data_file.print(',');
-  data_file.println(optical_flow->distance);
+  data_file.print(optical_flow->distance); data_file.print(',');
+  data_file.print(optical_flow->temperature); data_file.print(',');
+  data_file.println(optical_flow->quality);
 }
 
 void LogTeraRanger(void)
@@ -232,14 +234,15 @@ void setup()
   Serial.begin(57600);
   Serial.println("University of Tokyo SD Card Logger");
 
+
   // Give us a second.
   delay(1000);
 
-  ublox_serial.Init();  // Serial1
-  // mk_serial.Init();  // Serial2
-  tera_ranger.Init();  // Serial2
-  // mk_mag.Init();  // Serial3
-  px4flow.Init();  // Serial3
+  ublox_serial.Init();  // Serial1 (old style)
+  // mk_serial.Init();  // Serial2 (old style)
+  tera_ranger.Init();  // Serial2 (old style)
+  // mk_mag.Init();  // Serial3 (old style)
+  Serial3.begin(115200);  // PX4Flow
 }
 
 void loop()
@@ -380,9 +383,15 @@ void loop()
   }
 */
   // PX4FLOW
-  px4flow.ProcessIncoming();
-  if (px4flow.IsAvailable())
+  // NOTE: this class has been restructured and others should also be
+  while (Serial3.available())
   {
+    uint8_t byte = Serial3.read();
+    px4flow.ProcessIncoming(byte);
+  }
+  if (px4flow.UnreadData())
+  {
+    px4flow.Pop();
     if (logging_active)
     {
       digitalWrite(LED3, HIGH);
@@ -399,9 +408,7 @@ void loop()
         default:
           break;
       }
-      LogOpticalFlow();
       digitalWrite(LED3, LOW);
     }
-    px4flow.Pop();
   }
 }
