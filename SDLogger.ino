@@ -234,7 +234,6 @@ void setup()
   Serial.begin(57600);
   Serial.println("University of Tokyo SD Card Logger");
 
-
   // Give us a second.
   delay(1000);
 
