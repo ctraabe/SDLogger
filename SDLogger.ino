@@ -104,8 +104,7 @@ void LogFCSensorData(void)
   data_file.print(fc_sensor_data->gyro_sum[1]); data_file.print(',');
   data_file.print(fc_sensor_data->gyro_sum[2]); data_file.print(',');
   data_file.print(fc_sensor_data->biased_pressure); data_file.print(',');
-  data_file.print(fc_sensor_data->counter_128_hz); data_file.print(',');
-  data_file.println(fc_sensor_data->led_on);
+  data_file.println(fc_sensor_data->battery_voltage);
 }
 
 void LogMagData(void)
@@ -129,10 +128,10 @@ void LogOpticalFlow(void)
   data_file.print((uint32_t)optical_flow->time_usec); data_file.print(',');
   data_file.print(optical_flow->flow_comp_m_x); data_file.print(',');
   data_file.print(optical_flow->flow_comp_m_y); data_file.print(',');
-  data_file.println(optical_flow->ground_distance);
+  data_file.print(optical_flow->ground_distance); data_file.print(',');
   data_file.print(optical_flow->flow_x); data_file.print(',');
   data_file.print(optical_flow->flow_y); data_file.print(',');
-  data_file.print(optical_flow->quality); data_file.print(',');
+  data_file.println(optical_flow->quality);
 }
 
 void LogOpticalFlowRad(void)
@@ -286,8 +285,7 @@ void loop()
         // Request a data stream from the FlightCtrl
         logging_active = true;
         digitalWrite(GREEN_LED, HIGH);
-        Serial2.print("#0i?y\r");  // Request data stream (encoded).
-        Serial3.print("#0i?y\r");  // Request data stream (encoded).
+        // Serial2.print("#0i?y\r");  // Request data stream (encoded).
       }
     }
     else if (logging_active)

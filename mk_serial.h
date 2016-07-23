@@ -57,8 +57,7 @@ struct FCSensorData {
   int16_t accelerometer_sum[3];
   int16_t gyro_sum[3];
   uint16_t biased_pressure;
-  uint8_t counter_128_hz;
-  uint8_t led_on;
+  uint16_t battery_voltage;
 } __attribute__((packed));
 
 
