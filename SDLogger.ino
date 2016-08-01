@@ -344,7 +344,7 @@ void loop()
     }
     mk_serial.Pop();
   }
-*/
+
   // TeraRanger
   tera_ranger.ProcessIncoming();
   if (tera_ranger.IsAvailable())
@@ -358,7 +358,7 @@ void loop()
     }
     tera_ranger.Pop();
   }
-/*
+
   // MK Mag Logging
   mk_mag.ProcessIncoming();
 

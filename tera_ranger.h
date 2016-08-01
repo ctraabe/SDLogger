@@ -44,7 +44,7 @@ private:
     uint16_t ir;
     uint16_t sonar;
     uint8_t crc;
-  };
+  } __attribute__((packed));
 
   HardwareSerial &serial_;
 
