@@ -5,6 +5,7 @@
 #include "mavlink.hpp"
 #include "tera_ranger.h"
 #include "ublox.h"
+#include "utokyo.hpp"
 
 // Pin definitions
 #define GREEN_LED (7)
@@ -44,6 +45,9 @@ MKSerial mk_mag(Serial3);
 
 // MAVLink-based sensor
 MAVLink px4flow;
+
+// UTokyo-based sensor
+UTokyo ricoh;
 
 bool sd_initialized;
 
@@ -163,6 +167,48 @@ void LogTeraRanger(void)
   data_file.println(tera_ranger.Sonar());
 }
 
+void LogRicohObjectDetection(void)
+{
+  RicohObjectDetection * data = reinterpret_cast<RicohObjectDetection *>
+    (ricoh.Payload());
+  data_file.print("8,");
+
+  data_file.print(millis()); data_file.print(',');
+  data_file.print(data->latency); data_file.print(',');
+  data_file.print(data->capture_time); data_file.print(',');
+  data_file.print(data->latency_ranging); data_file.print(',');
+  data_file.print(data->nearest_point_parameters[0]); data_file.print(',');
+  data_file.print(data->nearest_point_parameters[1]); data_file.print(',');
+  data_file.print(data->nearest_point_parameters[2]); data_file.print(',');
+  data_file.print(data->marking_point_parameters[0]); data_file.print(',');
+  data_file.print(data->marking_point_parameters[1]); data_file.print(',');
+  data_file.println(data->marking_point_parameters[2]);
+}
+
+void LogRicohVisualOdometry(void)
+{
+  RicohVisualOdometry * data = reinterpret_cast<RicohVisualOdometry *>
+    (ricoh.Payload());
+  data_file.print("9,");
+
+  data_file.print(millis()); data_file.print(',');
+  data_file.print(data->latency); data_file.print(',');
+  data_file.print(data->capture_time); data_file.print(',');
+  data_file.print(data->reliability); data_file.print(',');
+  data_file.print(data->velocity[0]); data_file.print(',');
+  data_file.print(data->velocity[1]); data_file.print(',');
+  data_file.print(data->velocity[2]); data_file.print(',');
+  data_file.print(data->quaternion[0]); data_file.print(',');
+  data_file.print(data->quaternion[1]); data_file.print(',');
+  data_file.print(data->quaternion[2]); data_file.print(',');
+  data_file.print(data->angular_velocity[0]); data_file.print(',');
+  data_file.print(data->angular_velocity[1]); data_file.print(',');
+  data_file.print(data->angular_velocity[2]); data_file.print(',');
+  data_file.print(data->position[0]); data_file.print(',');
+  data_file.print(data->position[1]); data_file.print(',');
+  data_file.println(data->position[2]);
+}
+
 void UpdateTime(void)
 {
   UBXTimeUTC * ubx_time = reinterpret_cast<UBXTimeUTC *>(ublox_serial.Data());
@@ -237,10 +283,11 @@ void setup()
   delay(1000);
 
   ublox_serial.Init();  // Serial1 (old style)
-  // mk_serial.Init();  // Serial2 (old style)
-  tera_ranger.Init();  // Serial2 (old style)
+  mk_serial.Init();  // Serial2 (old style)
+  // tera_ranger.Init();  // Serial2 (old style)
   // mk_mag.Init();  // Serial3 (old style)
-  Serial3.begin(115200);  // PX4Flow
+  // Serial3.begin(115200);  // PX4Flow
+  Serial3.begin(115200);  // Ricoh vision sensor
 }
 
 void loop()
@@ -358,7 +405,7 @@ void loop()
     }
     tera_ranger.Pop();
   }
-
+*/
   // MK Mag Logging
   mk_mag.ProcessIncoming();
 
@@ -378,7 +425,7 @@ void loop()
     }
     mk_mag.Pop();
   }
-*/
+/*
   // PX4FLOW
   // NOTE: this class has been restructured and others should also be
   while (Serial3.available())
@@ -401,6 +448,35 @@ void loop()
           break;
         case 106:  // optical flow rad
           LogOpticalFlowRad();
+          break;
+        default:
+          break;
+      }
+      digitalWrite(LED3, LOW);
+    }
+  }
+}
+*/
+  // Ricoh vision sensor
+  // NOTE: this class has been restructured and others should also be
+  while (Serial3.available())
+  {
+    uint8_t byte = Serial3.read();
+    ricoh.ProcessIncoming(byte);
+  }
+  if (ricoh.UnreadData())
+  {
+    ricoh.Pop();
+    if (logging_active)
+    {
+      digitalWrite(LED3, HIGH);
+      switch (ricoh.MessageID())
+      {
+        case 2:  // visual odometry
+          LogRicohVisualOdometry();
+          break;
+        case 3:  // object detection
+          LogRicohObjectDetection();
           break;
         default:
           break;

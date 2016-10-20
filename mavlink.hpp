@@ -40,7 +40,7 @@ public:
 
 private:
 
-  void DecodeRx(void);
+  void DecodeRx(uint16_t crc);
 
   struct MAVLinkPacket
   {
