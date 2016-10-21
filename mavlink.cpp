@@ -79,5 +79,5 @@ void MAVLink::DecodeRx(uint16_t crc)
   // Move the packet_queue reception location to the next slot.
   queue_rx_ = (queue_rx_ + 1) & MAVLINK_QUEUE_MASK;
 
-  if (queue_rx_ == queue_tail_) overrun_ = true;
+  if (queue_rx_ == queue_head_) overrun_ = true;
 }
