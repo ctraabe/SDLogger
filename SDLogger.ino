@@ -167,11 +167,42 @@ void LogTeraRanger(void)
   data_file.println(tera_ranger.Sonar());
 }
 
+void LogRicohOriginal(void)
+{
+  RicohOriginal * data = reinterpret_cast<RicohOriginal *>
+    (ricoh.Payload());
+  data_file.print("8,");
+
+  data_file.print(millis()); data_file.print(',');
+  data_file.print(data->latency); data_file.print(',');
+  data_file.print(data->capture_time); data_file.print(',');
+  data_file.print(data->reliability); data_file.print(',');
+  data_file.print(data->velocity[0]); data_file.print(',');
+  data_file.print(data->velocity[1]); data_file.print(',');
+  data_file.print(data->velocity[2]); data_file.print(',');
+  data_file.print(data->quaternion[0]); data_file.print(',');
+  data_file.print(data->quaternion[1]); data_file.print(',');
+  data_file.print(data->quaternion[2]); data_file.print(',');
+  data_file.print(data->angular_velocity[0]); data_file.print(',');
+  data_file.print(data->angular_velocity[1]); data_file.print(',');
+  data_file.print(data->angular_velocity[2]); data_file.print(',');
+  data_file.print(data->position[0]); data_file.print(',');
+  data_file.print(data->position[1]); data_file.print(',');
+  data_file.print(data->position[2]); data_file.print(',');
+  data_file.print(data->latency_ranging); data_file.print(',');
+  data_file.print(data->nearest_point_parameters[0]); data_file.print(',');
+  data_file.print(data->nearest_point_parameters[1]); data_file.print(',');
+  data_file.print(data->nearest_point_parameters[2]); data_file.print(',');
+  data_file.print(data->marking_point_parameters[0]); data_file.print(',');
+  data_file.print(data->marking_point_parameters[1]); data_file.print(',');
+  data_file.println(data->marking_point_parameters[2]);
+}
+
 void LogRicohObjectDetection(void)
 {
   RicohObjectDetection * data = reinterpret_cast<RicohObjectDetection *>
     (ricoh.Payload());
-  data_file.print("8,");
+  data_file.print("9,");
 
   data_file.print(millis()); data_file.print(',');
   data_file.print(data->latency); data_file.print(',');
@@ -189,7 +220,7 @@ void LogRicohVisualOdometry(void)
 {
   RicohVisualOdometry * data = reinterpret_cast<RicohVisualOdometry *>
     (ricoh.Payload());
-  data_file.print("9,");
+  data_file.print("10,");
 
   data_file.print(millis()); data_file.print(',');
   data_file.print(data->latency); data_file.print(',');
@@ -373,7 +404,7 @@ void loop()
 
     ublox_serial.Pop();
   }
-/*
+
   // MK FlightCtrl Logging
   mk_serial.ProcessIncoming();
 
@@ -391,7 +422,7 @@ void loop()
     }
     mk_serial.Pop();
   }
-
+/*
   // TeraRanger
   tera_ranger.ProcessIncoming();
   if (tera_ranger.IsAvailable())
@@ -405,7 +436,7 @@ void loop()
     }
     tera_ranger.Pop();
   }
-*/
+
   // MK Mag Logging
   mk_mag.ProcessIncoming();
 
@@ -472,10 +503,13 @@ void loop()
       digitalWrite(LED3, HIGH);
       switch (ricoh.MessageID())
       {
-        case 2:  // visual odometry
+        case 0:  // visual odometry
+          LogRicohOriginal();
+          break;
+        case 1:  // visual odometry
           LogRicohVisualOdometry();
           break;
-        case 3:  // object detection
+        case 2:  // object detection
           LogRicohObjectDetection();
           break;
         default:
