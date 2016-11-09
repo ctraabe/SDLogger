@@ -57,6 +57,14 @@ private:
   bool overrun_;  // Indicates that the queue has lost data
 };
 
+struct RasPi {
+  uint32_t timestamp;  // microseconds
+  float position[3];  // meters
+  float heading;
+  float sigma[3];
+  uint8_t status;
+} __attribute__((packed));
+
 struct RicohOriginal {
   uint16_t latency;  // Latency (ms)
   uint32_t capture_time;

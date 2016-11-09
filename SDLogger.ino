@@ -48,6 +48,7 @@ MAVLink px4flow;
 
 // UTokyo-based sensor
 UTokyo ricoh;
+UTokyo raspi;
 
 bool sd_initialized;
 
@@ -240,6 +241,22 @@ void LogRicohVisualOdometry(void)
   data_file.println(data->position[2]);
 }
 
+void LogRaspi(void)
+{
+  RasPi * data = reinterpret_cast<RasPi *>(raspi.Payload());
+  data_file.print("11,");
+
+  data_file.print(millis()); data_file.print(',');
+  data_file.print(data->position[0]); data_file.print(',');
+  data_file.print(data->position[1]); data_file.print(',');
+  data_file.print(data->position[2]); data_file.print(',');
+  data_file.print(data->heading); data_file.print(',');
+  data_file.print(data->sigma[0]); data_file.print(',');
+  data_file.print(data->sigma[1]); data_file.print(',');
+  data_file.print(data->sigma[2]); data_file.print(',');
+  data_file.println((int)data->status);
+}
+
 void UpdateTime(void)
 {
   UBXTimeUTC * ubx_time = reinterpret_cast<UBXTimeUTC *>(ublox_serial.Data());
@@ -318,7 +335,7 @@ void setup()
   // tera_ranger.Init();  // Serial2 (old style)
   // mk_mag.Init();  // Serial3 (old style)
   // Serial3.begin(115200);  // PX4Flow
-  Serial3.begin(115200);  // Ricoh vision sensor
+  Serial3.begin(57600);  // Ricoh vision sensor
 }
 
 void loop()
@@ -487,7 +504,7 @@ void loop()
     }
   }
 }
-*/
+
   // Ricoh vision sensor
   // NOTE: this class has been restructured and others should also be
   while (Serial3.available())
@@ -519,3 +536,23 @@ void loop()
     }
   }
 }
+*/
+  // RaspberryPi
+  // NOTE: this class has been restructured and others should also be
+  while (Serial3.available())
+  {
+    uint8_t byte = Serial3.read();
+    raspi.ProcessIncoming(byte);
+  }
+  if (raspi.UnreadData())
+  {
+    raspi.Pop();
+    if (logging_active)
+    {
+      digitalWrite(LED3, HIGH);
+      LogRaspi();
+      digitalWrite(LED3, LOW);
+    }
+  }
+}
+
