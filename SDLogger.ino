@@ -380,7 +380,6 @@ void loop()
         // Request a data stream from the FlightCtrl
         logging_active = true;
         digitalWrite(GREEN_LED, HIGH);
-        // Serial2.print("#0i?y\r");  // Request data stream (encoded).
       }
     }
     else if (logging_active)
@@ -424,6 +423,12 @@ void loop()
 
   // MK FlightCtrl Logging
   mk_serial.ProcessIncoming();
+  static unsigned long next_request_time = 0;
+  if (((next_request_time - millis()) & 0x80000000) && logging_active)
+  {
+    Serial2.print("#0i?y\r");  // Request data stream (encoded).
+    next_request_time = millis() + 1000;
+  }
 
   if (mk_serial.IsAvailable())
   {
